@@ -1,0 +1,89 @@
+
+version: "3.8"
+
+services:
+
+    #PHP service
+    # this service is built in custom docker file so we can run custom commands
+    php:
+        build:
+            context: .
+            target: php
+            args:
+                - APP_ENV=${APP_ENV}
+        environment:
+            - APP_ENV=${APP_ENV}
+            - CONTAINER_ROLE=app
+
+        working_dir: /var/www
+        volumes :
+            - ./:/var/www
+        ports:
+            - 8000:8000
+        depends_on:
+            - database
+            - redis
+
+    #the port exposes internal port to be accessed via external as external:internal
+    #${} sign is used to access .env variable file. EG ${DB_DATABASE}
+    database:
+        image:  mysql:8.0
+        ports:
+            -   3307:3306
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_USER=${DB_USERNAME}
+            - MYSQL_PASSWORD=${DB_PASSWORD}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+
+        #where to store the data. the volume defined globally below:location internally
+        volumes:
+            - type: volume
+              source: db-data
+              target: /var/lib/mysql
+
+    #Redis Server
+    redis:
+        image: redis:alpine
+        command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+        ports:
+            -   6379:6379
+
+
+
+#the volumes is used to persist data
+volumes:
+    db-data: ~
+
+
+
+################################################################
+#to build: docker-compose up --build
+#to run in the packground, use -d:  docker-compose up -d
+
+# in the database section, volume was defined as:
+#         volumes:
+#             - db-data: /var/lib/mysql
+# but running docker-compose up --build throws the following error: services.database.volumes.0 type is required
+# This is fixed by changing it to
+#         volumes:
+#             - type: volume
+#               source: db-data
+#               target: /var/lib/mysql
+
+
+
+# after building, i get this: Attaching to laravel-websockets-chat-application-example-database-1
+# Error response from daemon: Ports are not available: listen tcp 0.0.0.0:3306: bind: address already in use
+
+# The most common reason for this error is that you might already have a running MySQL instance or another application using port 3306 on your host machine. To resolve this, you can try one of the following solutions:
+# 1. Stop the conflicting process
+# 2. Change the container's port
+# 2 is implemented. Changed to 3307:3306 from 3306:3306
+
+
+# Error runing the .sh
+# Error response from daemon: failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "docker/entrypoint.sh": permission denied: unknown
+# Solved by changing the permission:configs:
+# chmod +x docker/entrypoint.sh
+
