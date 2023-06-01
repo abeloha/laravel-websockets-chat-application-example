@@ -49,7 +49,19 @@ services:
         ports:
             -   6379:6379
 
+    queue:
+        build:
+            context: .
+            target: php
+            args:
+                - APP_ENV=${APP_ENV}
+        environment:
+            - APP_ENV=${APP_ENV}
+            - CONTAINER_ROLE=queue
 
+        working_dir: /var/www
+        volumes :
+            - ./:/var/www
 
 #the volumes is used to persist data
 volumes:
@@ -60,6 +72,16 @@ volumes:
 ################################################################
 #to build: docker-compose up --build
 #to run in the packground, use -d:  docker-compose up -d
+# to execute a command in the container, use:
+# docker exec <container-name> <command>
+#     eg docker exec laravel-docker-php-1 php artisan migrate
+# use docker-compose ps to get the name of the container
+
+# to view logs configs:
+# docker logs <container-name>
+
+# ssh into container:
+# docker exec -it laravel-websockets-chat-application-example-php-1 /bin/sh
 
 # in the database section, volume was defined as:
 #         volumes:
@@ -86,4 +108,9 @@ volumes:
 # Error response from daemon: failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "docker/entrypoint.sh": permission denied: unknown
 # Solved by changing the permission:configs:
 # chmod +x docker/entrypoint.sh
+
+
+# Laravel redis issue: Connection refused
+# change the redis host in the env to:
+# REDIS_HOST=redis
 

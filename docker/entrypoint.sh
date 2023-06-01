@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if [ ! -f "vendor/autoload.php"]; then
-    print "Running composer install"
+if [ ! -f "vendor/autoload.php" ]; then
+    echo "Running composer install"
     composer install --no-progress --no-interaction
 else
-    print "Composer already installed. Skipping."
+    echo "Composer already installed. Skipping."
 fi
 
 if [ ! -f ".env" ]; then
@@ -14,11 +14,21 @@ else
     echo "env file already exists"
 fi
 
-php artisan migrate
-php artisan key:generate
+role=${CONTAINER_ROLE:-app}
 
-php artisan serve --port=$PORT --host=0.0.0.0 --env=.env
-exec docker-php-entrypoint "$@"
+if [ "$role" == "app" ]; then
+    php artisan migrate
+    php artisan key:generate
+    php artisan serve --port=$PORT --host=0.0.0.0 --env=.env
+
+    exec docker-php-entrypoint "$@"
+elif [ "$role" == "queue" ]; then
+    echo "runing queue"
+    php /var/www/artisan queue:work --verbose --tries=3 --timeout=180
+fi
+
+
+
 
 
 # Error runing the .sh
